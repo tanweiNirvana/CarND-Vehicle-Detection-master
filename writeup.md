@@ -1,0 +1,159 @@
+
+The goals / steps of this project are the following:
+
+* Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
+* Optionally, you can also apply a color transform and append binned color features, as well as histograms of color, to your HOG feature vector. 
+* Note: for those first two steps don't forget to normalize your features and randomize a selection for training and testing.
+* Implement a sliding-window technique and use your trained classifier to search for vehicles in images.
+* Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
+* Estimate a bounding box for vehicles detected.
+
+[//]: # (Image References)
+[image1]: ./output_images/car_not_car.jpg
+[image2]: ./output_images/HOG_example.jpg
+[image3]: ./output_images/color_example.jpg
+[image4]: ./output_images/extract_features.jpg
+[image5]: ./output_images/test1.jpg
+[image6]: ./output_images/slide_window.jpg
+[image7]: ./output_images/slide_window2.jpg
+[image8]: ./output_images/out_img.jpg
+[image9]: ./output_images/heatmap.jpg
+[image10]: ./output_images/test_images.jpg
+[video1]: ./project_video_out_2.mp4
+
+## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
+###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+
+---
+### Writeup / README
+
+#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Vehicle-Detection/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
+
+You're reading it!
+
+### Histogram of Oriented Gradients (HOG)
+
+#### 1. Import Modules, Load images and show images that we will work on
+
+As a first step in cell 1 to 3 I have imported modules for project, loaded images from folders and showed randomly 10 images from Cars and Non Cars data set. Here is example of Cars and Non Cars images:
+
+![alt text][image1]
+
+#### 2. Explain how (and identify where in your code) you extracted HOG features from the training images.
+
+The code for this step is contained in cells 4 to 5 of the IPython notebook.
+
+First u created function get_hog_features and after i i used it to read all the cars and non-cars images. Here is an example of one of each of the cars and non_cars classes:
+
+![alt text][image2]
+
+### Color Histogram
+
+In cells 6 I have built functions color_histmg and bin_spatial. color_histmg is to extract histogram of color channels and bin_spatial to to compute binned color features. in cells 7 i have shown Cars and Non Cars histogram:
+
+![alt text][image3]
+
+### Extract Features
+
+In cells 8 - 11 i have built function extract_features
+
+I then explored different color spaces and different skimage.hog() parameters (orientations, pixels_per_cell, and cells_per_block). I grabbed random images from each of the two classes and displayed them to get a feel for what the skimage.hog() output looks like.
+
+Here is example of normalized features of image using the RGB color space and HOG parameters of orientations=9, pixels_per_cell=8 and cells_per_block=2:
+
+![alt text][image4]
+
+#### 2. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
+
+I trained a linear SVM using parameters in cell 12.
+
+orient = 11 # HOG orientations
+
+pix_per_cell = 16 # HOG pixels per cell
+
+cell_per_block = 2 # HOG cells per block
+
+hog_channel = 'ALL' # Can be 0, 1, 2, or "ALL"
+
+spatial_size = (32, 32) # Spatial binning dimensions
+
+hist_bins = 16    # Number of histogram bins
+
+spatial_feat = True # Spatial features on or off
+
+hist_feat = True # Histogram features on or off
+
+hog_feat = True # HOG features on or off
+
+y_start_stop = [None, None] # Min and max in y to search in slide_window()
+
+
+While training linear SVM i using GridSearchCV and tested parameters tuning to get best results. Final parameters that showed 98.76% Test Accuracy are in above cell.
+
+### Sliding Window Search
+
+#### 1. Describe how (and identify where in your code) you implemented a sliding window search. How did you decide what scales to search and how much to overlap windows?
+
+in cell 13 i have created function draw boxes and slide_window that that takes an image start and stop positions in both x and y, window size (x and y dimensions), and overlap fraction (for both x and y).
+
+In cell 14 random example image that will be used to slide window search
+
+![alt text][image5]
+
+In cell 15 Example of Slide all windows over image.
+
+![alt text][image6]
+
+in cell 16 - 17: defined functions single_img_features and search_windows that extract features from a single image window. This function is very similar to extract_features() just for a single image rather than list of images. Here is example of search window and as you can see predictions are not that great.
+
+![alt text][image7]
+
+in cell 18: I have created function find_cars. This single function that can extract features using hog sub-sampling and make predictions
+
+I have tested function find_cars with windows search area of:
+
+
+ystart = 400
+
+ystop = 656  
+
+
+I have also used for loop to use scale of search window from 1 to 2.0 with step of 0.1.
+
+
+for i in np.arange(1,2.0,0.1):
+    scale = i
+    out_img, recktangles = find_cars(img, ystart, ystop, scale, svc, X_scaler, 
+                    orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
+    recktangles_test += recktangles_test
+
+
+Here is result of above code
+
+![alt text][image8]
+
+In cells 20-21 I built a heat-map from slide window detections in order to combine overlapping detections and remove false positives.
+
+![alt text][image9]
+
+#### Pipeline
+
+Ultimately I searched on two scales using YUV 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result. Here are some example images:
+
+![alt text][image10]
+
+#### Video Implementation
+
+
+![alt text][video1]
+
+
+### Discussion
+
+#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+
+I have tested many parameters before i have chosen right ones. Depending on parameters I had Python ValueError: "ValueError: operands could not be broadcast together with shapes (1,4308) (3564,) (1,4308)". This was due different parameter settings of Training Classifier and Evaluation of data. Parameters during training data and evaluation needs to be same.
+
+My pipeline is doing good but you can see that there Windows fallowing cars are twitching this can be improved by adding more training data, using different classifier and fine tuning Parameters (increasing window search, spatial size, etc…). 
+
+
